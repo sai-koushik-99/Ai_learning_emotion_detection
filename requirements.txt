@@ -1,0 +1,31 @@
+# ── Deep learning ─────────────────────────────────────────────────────────
+# Python 3.13 requires tensorflow-cpu >= 2.20
+tensorflow-cpu>=2.20.0
+
+# PyTorch CPU (Python 3.13)
+torch>=2.12.0
+
+# ── NLP / Transformers ────────────────────────────────────────────────────
+transformers>=5.0.0
+datasets>=5.0.0
+tokenizers>=0.21.0
+huggingface-hub>=1.0.0
+
+# ── Classical ML / data ───────────────────────────────────────────────────
+scikit-learn>=1.4.0
+numpy>=1.26.0
+pandas>=2.0.0
+
+# ── NLP preprocessing ─────────────────────────────────────────────────────
+nltk>=3.8.0
+
+# ── Generative AI (new v2 SDK — compatible with protobuf 7) ───────────────
+google-genai>=2.0.0
+
+# ── Web app ───────────────────────────────────────────────────────────────
+streamlit>=1.32.0
+plotly>=5.20.0
+
+# ── Utilities ─────────────────────────────────────────────────────────────
+python-dotenv>=1.0.0
+tqdm>=4.66.0

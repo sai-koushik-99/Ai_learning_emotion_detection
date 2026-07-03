@@ -1,0 +1,47 @@
+# Secrets — never commit
+.env
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Trained model weights (large binary files)
+models/bilstm/*.h5
+models/bilstm/*.pkl
+models/bert_emotion_model_final/*.safetensors
+models/bert_emotion_model_final/*.bin
+
+# Runtime data
+data/interactions.csv
+data/
+
+# Jupyter / Kaggle notebooks checkpoints
+.ipynb_checkpoints/
+notebooks/.ipynb_checkpoints/
+
+# Test artefacts
+test_gemini.py
+test_inference.py
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Build / dist
+dist/
+build/
+*.egg-info/
