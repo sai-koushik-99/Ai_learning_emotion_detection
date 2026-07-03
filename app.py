@@ -23,6 +23,15 @@ load_dotenv()
 from src.predict import EmotionPredictor, ModelNotReadyError
 from src.preprocessing import EMOTION_CLASSES
 
+# ── Download models from Google Drive if running on cloud ─────────────────
+try:
+    from download_models import ensure_models
+    _dl_ok, _dl_err = ensure_models()
+    if not _dl_ok and _dl_err:
+        logging.warning("Model download: %s", _dl_err)
+except Exception:
+    pass  # Local run — models already on disk
+
 logging.basicConfig(level=logging.INFO)
 
 # ── Constants ──────────────────────────────────────────────────────────────
