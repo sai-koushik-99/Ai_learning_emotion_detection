@@ -51,13 +51,9 @@ log = logging.getLogger(__name__)
 
 # ── Resolved model paths ───────────────────────────────────────────────────
 _ROOT          = Path(__file__).resolve().parent.parent
-BILSTM_WEIGHTS = _ROOT / "models" / "bilstm" / "bilstm_weights.weights.h5"
+BILSTM_NPZ     = _ROOT / "models" / "bilstm" / "bilstm_weights.npz"
 BILSTM_TOK     = _ROOT / "models" / "bilstm" / "tokenizer.pkl"
 BERT_DIR       = _ROOT / "models" / "bert_emotion_model_final"
-
-# Keep legacy paths for reference
-_KERAS_PATH = _ROOT / "models" / "bilstm" / "bilstm_emotion_model.keras"
-_H5_PATH    = _ROOT / "models" / "bilstm" / "bilstm_emotion_model.h5"
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -105,14 +101,14 @@ def _require_torch():
 
 def _load_bilstm():
     """
-    Rebuild BiLSTM architecture from src/model.py and load saved weights.
-    This approach is TF-version-independent — no config serialization involved.
+    Rebuild BiLSTM from src/model.py and load weights from a numpy .npz file.
+    Fully TF/Keras version independent — no config serialization used.
     """
     tf, pad_sequences = _require_tensorflow()
 
-    if not BILSTM_WEIGHTS.exists():
+    if not BILSTM_NPZ.exists():
         raise ModelNotReadyError(
-            f"BiLSTM weights not found at:\n  {BILSTM_WEIGHTS}\n\n"
+            f"BiLSTM weights not found at:\n  {BILSTM_NPZ}\n\n"
             "Train it first with:\n"
             "  python src/train.py --model bilstm"
         )
@@ -126,13 +122,14 @@ def _load_bilstm():
     import numpy as np
     from src.model import build_bilstm, VOCAB_SIZE, MAX_LEN, NUM_CLASSES
 
-    log.info("Building BiLSTM architecture and loading weights from %s …", BILSTM_WEIGHTS)
+    log.info("Building BiLSTM and loading weights from %s …", BILSTM_NPZ)
     model = build_bilstm(vocab_size=VOCAB_SIZE, num_classes=NUM_CLASSES)
-    # Build the model by running a dummy forward pass
     dummy = np.zeros((1, MAX_LEN), dtype=np.int32)
-    _ = model(dummy)
-    # Load weights only — no config deserialization, fully version-neutral
-    model.load_weights(str(BILSTM_WEIGHTS))
+    _ = model(dummy)  # build layers
+
+    npz = np.load(str(BILSTM_NPZ))
+    weights = [npz[f"arr_{i}"] for i in range(len(npz.files))]
+    model.set_weights(weights)
 
     with open(BILSTM_TOK, "rb") as f:
         tokenizer = pickle.load(f)
