@@ -50,13 +50,14 @@ from src.bert_model import BERT_MAX_LEN
 log = logging.getLogger(__name__)
 
 # ── Resolved model paths ───────────────────────────────────────────────────
-_ROOT       = Path(__file__).resolve().parent.parent
-# Support both .keras (new, version-neutral) and .h5 (legacy)
+_ROOT          = Path(__file__).resolve().parent.parent
+BILSTM_WEIGHTS = _ROOT / "models" / "bilstm" / "bilstm_weights.weights.h5"
+BILSTM_TOK     = _ROOT / "models" / "bilstm" / "tokenizer.pkl"
+BERT_DIR       = _ROOT / "models" / "bert_emotion_model_final"
+
+# Keep legacy paths for reference
 _KERAS_PATH = _ROOT / "models" / "bilstm" / "bilstm_emotion_model.keras"
 _H5_PATH    = _ROOT / "models" / "bilstm" / "bilstm_emotion_model.h5"
-BILSTM_H5   = _KERAS_PATH if _KERAS_PATH.exists() else _H5_PATH
-BILSTM_TOK  = _ROOT / "models" / "bilstm" / "tokenizer.pkl"
-BERT_DIR    = _ROOT / "models" / "bert_emotion_model_final"
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -103,15 +104,15 @@ def _require_torch():
 # ══════════════════════════════════════════════════════════════════════════
 
 def _load_bilstm():
-    """Load BiLSTM model and tokeniser. Raises ModelNotReadyError if missing."""
+    """
+    Rebuild BiLSTM architecture from src/model.py and load saved weights.
+    This approach is TF-version-independent — no config serialization involved.
+    """
     tf, pad_sequences = _require_tensorflow()
 
-    # Prefer .keras (version-neutral) over .h5
-    bilstm_path = _KERAS_PATH if _KERAS_PATH.exists() else _H5_PATH
-
-    if not bilstm_path.exists():
+    if not BILSTM_WEIGHTS.exists():
         raise ModelNotReadyError(
-            f"BiLSTM model file not found at:\n  {bilstm_path}\n\n"
+            f"BiLSTM weights not found at:\n  {BILSTM_WEIGHTS}\n\n"
             "Train it first with:\n"
             "  python src/train.py --model bilstm"
         )
@@ -122,8 +123,17 @@ def _load_bilstm():
             "  python src/train.py --model bilstm"
         )
 
-    log.info("Loading BiLSTM from %s …", bilstm_path)
-    model = tf.keras.models.load_model(str(bilstm_path))
+    import numpy as np
+    from src.model import build_bilstm, VOCAB_SIZE, MAX_LEN, NUM_CLASSES
+
+    log.info("Building BiLSTM architecture and loading weights from %s …", BILSTM_WEIGHTS)
+    model = build_bilstm(vocab_size=VOCAB_SIZE, num_classes=NUM_CLASSES)
+    # Build the model by running a dummy forward pass
+    dummy = np.zeros((1, MAX_LEN), dtype=np.int32)
+    _ = model(dummy)
+    # Load weights only — no config deserialization, fully version-neutral
+    model.load_weights(str(BILSTM_WEIGHTS))
+
     with open(BILSTM_TOK, "rb") as f:
         tokenizer = pickle.load(f)
     log.info("BiLSTM loaded.")
