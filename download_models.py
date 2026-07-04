@@ -1,9 +1,6 @@
 """
 Downloads trained model files from Google Drive at startup.
-Called by app.py when running on Streamlit Cloud (model files not in repo).
-
-File IDs are read from Streamlit Secrets or environment variables.
-Falls back to hardcoded public IDs if secrets are not set.
+Uses gdown with fuzzy=True to handle Google's virus-scan redirect for large files.
 """
 
 import os
@@ -15,65 +12,92 @@ log = logging.getLogger(__name__)
 BILSTM_DIR = Path("models/bilstm")
 BERT_DIR   = Path("models/bert_emotion_model_final")
 
-# ── Public Google Drive file IDs (set via Streamlit Secrets to override) ──
-_DEFAULT_IDS = {
-    "GDRIVE_BILSTM_H5":    "1n0qW7GMaewqXeGOeX6r9utWY8oalelpU",
-    "GDRIVE_BILSTM_TOK":   "1zH_5lHE_VzbMMi_nkUlY2dOYXB_OymEM",
-    "GDRIVE_BERT_WEIGHTS": "1JmDVeow6zQ4d4vpwErAvk7zpnTjIkizq",
-}
-
-_FILE_PATHS = {
-    "GDRIVE_BILSTM_H5":    BILSTM_DIR / "bilstm_emotion_model.h5",
-    "GDRIVE_BILSTM_TOK":   BILSTM_DIR / "tokenizer.pkl",
-    "GDRIVE_BERT_WEIGHTS": BERT_DIR   / "model.safetensors",
+# Google Drive file IDs
+_FILE_MAP = {
+    "GDRIVE_BILSTM_H5":    (BILSTM_DIR / "bilstm_emotion_model.h5",   "1n0qW7GMaewqXeGOeX6r9utWY8oalelpU"),
+    "GDRIVE_BILSTM_TOK":   (BILSTM_DIR / "tokenizer.pkl",              "1zH_5lHE_VzbMMi_nkUlY2dOYXB_OymEM"),
+    "GDRIVE_BERT_WEIGHTS": (BERT_DIR   / "model.safetensors",          "1JmDVeow6zQ4d4vpwErAvk7zpnTjIkizq"),
 }
 
 
-def _download(file_id: str, dest: Path) -> bool:
-    """Download a single file from Google Drive using gdown."""
-    if dest.exists():
-        log.info("Already exists, skipping: %s", dest.name)
+def _download_file(file_id: str, dest: Path) -> bool:
+    """Download from Google Drive with multiple fallback methods."""
+    if dest.exists() and dest.stat().st_size > 1000:
+        log.info("Already exists: %s", dest.name)
         return True
+
+    dest.parent.mkdir(parents=True, exist_ok=True)
+
+    # Method 1: gdown with fuzzy (handles large file virus-scan warning)
     try:
         import gdown
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        url = f"https://drive.google.com/uc?id={file_id}&export=download"
-        log.info("Downloading %s ...", dest.name)
+        url = f"https://drive.google.com/uc?id={file_id}"
+        log.info("Downloading %s via gdown...", dest.name)
         gdown.download(url, str(dest), quiet=False, fuzzy=True)
         if dest.exists() and dest.stat().st_size > 1000:
             log.info("Downloaded %s (%.1f MB)", dest.name, dest.stat().st_size / 1e6)
             return True
-        else:
-            log.error("Download produced empty/missing file: %s", dest.name)
-            return False
-    except Exception as exc:
-        log.error("Failed to download %s: %s", dest.name, exc)
-        return False
+        log.warning("gdown produced empty file for %s, trying fallback...", dest.name)
+    except Exception as e:
+        log.warning("gdown failed for %s: %s", dest.name, e)
+
+    # Method 2: requests with session (handles cookies for large files)
+    try:
+        import requests
+        log.info("Downloading %s via requests...", dest.name)
+        session = requests.Session()
+        url = f"https://drive.google.com/uc?export=download&id={file_id}"
+        response = session.get(url, stream=True, timeout=300)
+
+        # Handle Google's virus-scan confirmation for large files
+        token = None
+        for key, value in response.cookies.items():
+            if key.startswith("download_warning"):
+                token = value
+                break
+
+        if token:
+            url = f"https://drive.google.com/uc?export=download&confirm={token}&id={file_id}"
+            response = session.get(url, stream=True, timeout=300)
+
+        with open(dest, "wb") as f:
+            for chunk in response.iter_content(chunk_size=32768):
+                if chunk:
+                    f.write(chunk)
+
+        if dest.exists() and dest.stat().st_size > 1000:
+            log.info("Downloaded %s via requests (%.1f MB)", dest.name, dest.stat().st_size / 1e6)
+            return True
+    except Exception as e:
+        log.warning("requests fallback failed for %s: %s", dest.name, e)
+
+    log.error("All download methods failed for %s", dest.name)
+    return False
 
 
 def ensure_models() -> tuple[bool, str]:
     """
-    Download all model files if not present locally.
+    Download all model files if not present.
     Returns (success, error_message).
     """
-    all_present = all(path.exists() for path in _FILE_PATHS.values())
+    all_present = all(
+        path.exists() and path.stat().st_size > 1000
+        for path, _ in _FILE_MAP.values()
+    )
     if all_present:
         log.info("All model files already present.")
         return True, ""
 
     log.info("Downloading missing model files from Google Drive...")
 
-    for env_var, dest in _FILE_PATHS.items():
-        if dest.exists():
+    for env_var, (dest, default_id) in _FILE_MAP.items():
+        if dest.exists() and dest.stat().st_size > 1000:
             continue
-        # Use secret if set, else fall back to default public ID
-        file_id = os.getenv(env_var, _DEFAULT_IDS[env_var])
-        if not file_id:
-            return False, f"No file ID for {env_var}"
-        if not _download(file_id, dest):
+        file_id = os.getenv(env_var, default_id)
+        if not _download_file(file_id, dest):
             return False, (
                 f"Failed to download {dest.name}. "
-                "Check that the Google Drive file is publicly shared."
+                "Make sure the Google Drive file is shared as 'Anyone with the link can view'."
             )
 
     log.info("All model files ready.")
