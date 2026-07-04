@@ -1,5 +1,7 @@
 tensorflow-cpu==2.15.0
-torch==2.1.2
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.1.2+cpu
+torchvision==0.16.2+cpu
 transformers>=4.38.0
 datasets>=2.18.0
 tokenizers>=0.15.0
