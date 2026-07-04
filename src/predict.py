@@ -49,10 +49,41 @@ from src.bert_model import BERT_MAX_LEN
 
 log = logging.getLogger(__name__)
 
+
+# ── Pure-Python tokenizer (no Keras dependency) ────────────────────────────
+
+class JsonTokenizer:
+    """
+    Minimal tokenizer loaded from a plain JSON file.
+    Replicates Keras Tokenizer.texts_to_sequences() with no framework imports.
+    """
+    def __init__(self, json_path: str):
+        import json
+        with open(json_path, encoding="utf-8") as f:
+            data = json.load(f)
+        self._word_index = data["word_index"]
+        self._oov        = data.get("oov_token", "<OOV>")
+        self._oov_id     = self._word_index.get(self._oov, 1)
+        self._num_words  = data.get("num_words", 10000)
+
+    def texts_to_sequences(self, texts):
+        result = []
+        for text in texts:
+            seq = []
+            for word in str(text).lower().split():
+                idx = self._word_index.get(word, self._oov_id)
+                if idx < self._num_words:
+                    seq.append(idx)
+                else:
+                    seq.append(self._oov_id)
+            result.append(seq)
+        return result
+
 # ── Resolved model paths ───────────────────────────────────────────────────
 _ROOT          = Path(__file__).resolve().parent.parent
 BILSTM_NPZ     = _ROOT / "models" / "bilstm" / "bilstm_weights.npz"
-BILSTM_TOK     = _ROOT / "models" / "bilstm" / "tokenizer.pkl"
+BILSTM_TOK_JSON = _ROOT / "models" / "bilstm" / "tokenizer.json"
+BILSTM_TOK_PKL = _ROOT / "models" / "bilstm" / "tokenizer.pkl"   # legacy fallback
 BERT_DIR       = _ROOT / "models" / "bert_emotion_model_final"
 
 
@@ -112,11 +143,10 @@ def _load_bilstm():
             "Train it first with:\n"
             "  python src/train.py --model bilstm"
         )
-    if not BILSTM_TOK.exists():
+    if not BILSTM_TOK_JSON.exists() and not BILSTM_TOK_PKL.exists():
         raise ModelNotReadyError(
-            f"BiLSTM tokenizer not found at:\n  {BILSTM_TOK}\n\n"
-            "Re-run training to regenerate it:\n"
-            "  python src/train.py --model bilstm"
+            f"BiLSTM tokenizer not found.\n"
+            "Re-run training:  python src/train.py --model bilstm"
         )
 
     import numpy as np
@@ -131,8 +161,19 @@ def _load_bilstm():
     weights = [npz[f"arr_{i}"] for i in range(len(npz.files))]
     model.set_weights(weights)
 
-    with open(BILSTM_TOK, "rb") as f:
-        tokenizer = pickle.load(f)
+    # Load tokenizer — prefer JSON (no Keras dependency), fall back to pkl
+    if BILSTM_TOK_JSON.exists():
+        log.info("Loading tokenizer from JSON...")
+        tokenizer = JsonTokenizer(str(BILSTM_TOK_JSON))
+    elif BILSTM_TOK_PKL.exists():
+        log.info("Loading tokenizer from pkl...")
+        with open(BILSTM_TOK_PKL, "rb") as f:
+            tokenizer = pickle.load(f)
+    else:
+        raise ModelNotReadyError(
+            f"BiLSTM tokenizer not found.\n"
+            "Re-run training:  python src/train.py --model bilstm"
+        )
     log.info("BiLSTM loaded.")
     return model, tokenizer, pad_sequences
 

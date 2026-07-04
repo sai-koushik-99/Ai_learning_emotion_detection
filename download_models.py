@@ -14,9 +14,9 @@ BERT_DIR   = Path("models/bert_emotion_model_final")
 
 # Google Drive file IDs
 _FILE_MAP = {
-    "GDRIVE_BILSTM_NPZ":   (BILSTM_DIR / "bilstm_weights.npz",   "1O0xVTuOlMeluoYb2IkUxz2mcjPJAO_85"),
-    "GDRIVE_BILSTM_TOK":   (BILSTM_DIR / "tokenizer.pkl",         "1zH_5lHE_VzbMMi_nkUlY2dOYXB_OymEM"),
-    "GDRIVE_BERT_WEIGHTS": (BERT_DIR   / "model.safetensors",     "1JmDVeow6zQ4d4vpwErAvk7zpnTjIkizq"),
+    "GDRIVE_BILSTM_NPZ":   (BILSTM_DIR / "bilstm_weights.npz",  "1O0xVTuOlMeluoYb2IkUxz2mcjPJAO_85"),
+    "GDRIVE_BILSTM_TOK":   (BILSTM_DIR / "tokenizer.json",       "PLACEHOLDER_TOK_JSON_ID"),
+    "GDRIVE_BERT_WEIGHTS": (BERT_DIR   / "model.safetensors",    "1JmDVeow6zQ4d4vpwErAvk7zpnTjIkizq"),
 }
 
 
