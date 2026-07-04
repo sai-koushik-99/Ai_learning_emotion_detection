@@ -14,7 +14,7 @@ BERT_DIR   = Path("models/bert_emotion_model_final")
 
 # Google Drive file IDs
 _FILE_MAP = {
-    "GDRIVE_BILSTM_H5":    (BILSTM_DIR / "bilstm_emotion_model.h5",   "1n0qW7GMaewqXeGOeX6r9utWY8oalelpU"),
+    "GDRIVE_BILSTM_KERAS": (BILSTM_DIR / "bilstm_emotion_model.keras", "PLACEHOLDER_KERAS_ID"),
     "GDRIVE_BILSTM_TOK":   (BILSTM_DIR / "tokenizer.pkl",              "1zH_5lHE_VzbMMi_nkUlY2dOYXB_OymEM"),
     "GDRIVE_BERT_WEIGHTS": (BERT_DIR   / "model.safetensors",          "1JmDVeow6zQ4d4vpwErAvk7zpnTjIkizq"),
 }
@@ -28,12 +28,12 @@ def _download_file(file_id: str, dest: Path) -> bool:
 
     dest.parent.mkdir(parents=True, exist_ok=True)
 
-    # Method 1: gdown with fuzzy (handles large file virus-scan warning)
+    # Method 1: gdown (without fuzzy for compatibility with older versions)
     try:
         import gdown
-        url = f"https://drive.google.com/uc?id={file_id}"
+        url = f"https://drive.google.com/uc?id={file_id}&export=download"
         log.info("Downloading %s via gdown...", dest.name)
-        gdown.download(url, str(dest), quiet=False, fuzzy=True)
+        gdown.download(url, str(dest), quiet=False)
         if dest.exists() and dest.stat().st_size > 1000:
             log.info("Downloaded %s (%.1f MB)", dest.name, dest.stat().st_size / 1e6)
             return True

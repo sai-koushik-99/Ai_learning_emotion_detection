@@ -50,10 +50,13 @@ from src.bert_model import BERT_MAX_LEN
 log = logging.getLogger(__name__)
 
 # ── Resolved model paths ───────────────────────────────────────────────────
-_ROOT      = Path(__file__).resolve().parent.parent
-BILSTM_H5  = _ROOT / "models" / "bilstm" / "bilstm_emotion_model.h5"
-BILSTM_TOK = _ROOT / "models" / "bilstm" / "tokenizer.pkl"
-BERT_DIR   = _ROOT / "models" / "bert_emotion_model_final"
+_ROOT       = Path(__file__).resolve().parent.parent
+# Support both .keras (new, version-neutral) and .h5 (legacy)
+_KERAS_PATH = _ROOT / "models" / "bilstm" / "bilstm_emotion_model.keras"
+_H5_PATH    = _ROOT / "models" / "bilstm" / "bilstm_emotion_model.h5"
+BILSTM_H5   = _KERAS_PATH if _KERAS_PATH.exists() else _H5_PATH
+BILSTM_TOK  = _ROOT / "models" / "bilstm" / "tokenizer.pkl"
+BERT_DIR    = _ROOT / "models" / "bert_emotion_model_final"
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -103,9 +106,12 @@ def _load_bilstm():
     """Load BiLSTM model and tokeniser. Raises ModelNotReadyError if missing."""
     tf, pad_sequences = _require_tensorflow()
 
-    if not BILSTM_H5.exists():
+    # Prefer .keras (version-neutral) over .h5
+    bilstm_path = _KERAS_PATH if _KERAS_PATH.exists() else _H5_PATH
+
+    if not bilstm_path.exists():
         raise ModelNotReadyError(
-            f"BiLSTM model file not found at:\n  {BILSTM_H5}\n\n"
+            f"BiLSTM model file not found at:\n  {bilstm_path}\n\n"
             "Train it first with:\n"
             "  python src/train.py --model bilstm"
         )
@@ -116,8 +122,8 @@ def _load_bilstm():
             "  python src/train.py --model bilstm"
         )
 
-    log.info("Loading BiLSTM from %s …", BILSTM_H5)
-    model = tf.keras.models.load_model(str(BILSTM_H5))
+    log.info("Loading BiLSTM from %s …", bilstm_path)
+    model = tf.keras.models.load_model(str(bilstm_path))
     with open(BILSTM_TOK, "rb") as f:
         tokenizer = pickle.load(f)
     log.info("BiLSTM loaded.")
