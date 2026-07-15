@@ -1,0 +1,11 @@
+id,role,subject,input_text,expected_emotion,notes
+1,Learner,Mathematics,"I keep re-reading this section on derivatives but I still don't get why the chain rule works the way it does.",Confused,Clear confusion signal + subject keyword
+2,Learner,Computer Science,"This stupid loop just won't work no matter what I try. I've been at it for two hours.",Frustrated,Frustration keywords: stupid / won't work / hours
+3,Learner,Physics,"I wonder if the same principle applies when the object is moving in a curved path — would it still hold?",Curious,Curiosity keyword: wonder / would it
+4,Learner,Biology,"Oh I get it now — the cell membrane is selective because of the phospholipid bilayer structure. Makes total sense.",Confident,Got it / makes sense keywords
+5,Learner,Chemistry,"This is so cool! I never realised reactions could be visualised this way — I want to keep going!",Excited,Excited keywords: so cool / want to keep going
+6,Learner,General / Other,"I have three assignments due tomorrow and I haven't started any of them. I feel like I'm going to fail.",Anxious,Overwhelm / deadline / fail keywords
+7,Educator / TA,Computer Science,"A student submitted this solution. It looks correct but I'm not sure it's the most efficient approach.",Neutral,Neutral professional query
+8,Learner,Mathematics,"I'm so confused about eigenvalues. I don't understand what they even represent geometrically.",Confused,Confused keyword explicit
+9,Learner,History,"Ugh, I've read this chapter three times and nothing is sticking. This is hopeless.",Frustrated,Hopeless / frustration signal
+10,Educator / TA,Physics,"I find it really interesting that students consistently misunderstand Newton's third law. I'm curious about the best way to address it.",Curious,Curious keyword explicit

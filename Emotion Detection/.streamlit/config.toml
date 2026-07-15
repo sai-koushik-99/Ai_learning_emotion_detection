@@ -1,0 +1,17 @@
+[server]
+headless = true
+port = 8501
+fileWatcherType = "none"
+
+[browser]
+gatherUsageStats = false
+
+[logger]
+level = "error"
+
+[theme]
+base = "dark"
+primaryColor = "#636EFA"
+backgroundColor = "#0F0F1A"
+secondaryBackgroundColor = "#1A1A2E"
+textColor = "#E0E0E0"
